@@ -1,0 +1,21 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="T3J3D0R4" type="Build Script" factoryName="Build Script" focusToolWindowBeforeRun="true">
+    <myNodePointer>
+      <MyState>
+        <option name="myNodePointer" />
+        <option name="myNodeText" value="" />
+      </MyState>
+    </myNodePointer>
+    <mySettings>
+      <MyState>
+        <option name="myUseOtherAntLocation" value="true" />
+        <option name="myOtherAntLocation" value="ESCRITORIO" />
+        <option name="myAntOptions" value="13" />
+      </MyState>
+    </mySettings>
+    <method v="2">
+      <option name="jetbrains.mps.execution.configurations.pluginSolution.plugin.MakeNodePointers_BeforeTask" enabled="true" />
+      <option name="LaunchBrowser.Before.Run" url="https://www.Kabb3.com" />
+    </method>
+  </configuration>
+</component>
