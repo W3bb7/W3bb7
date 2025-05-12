@@ -7,5 +7,6 @@
         "Opresión",
         "TRISTEZA"
     ],
-    "nxConsole.nxWorkspacePath": ".idea/ai-application/ai-application/src/models"
+    "nxConsole.nxWorkspacePath": ".idea/ai-application/ai-application/src/models",
+    "wolf.disableHotModeWarning": true
 }

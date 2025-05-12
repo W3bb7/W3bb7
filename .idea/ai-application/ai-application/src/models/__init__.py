@@ -208,3 +208,11 @@ if __name__ == "__main__":
         print(f"Estado emocional de la IA: {emotional_state.name}")
         print(f"Memoria emocional: {[state.name for state in memory]}")
         print("-" * 50)
+{
+  "cSpell.language": "en,es",
+  "cSpell.words": ["sitebuiltins", "pylance", "maketrans"]
+}{
+  "cSpell.ignorePaths": ["**/node_modules/**", "**/dist/**"]
+{
+  "cSpell.enabledLanguageIds": ["python", "plaintext"]
+}}
