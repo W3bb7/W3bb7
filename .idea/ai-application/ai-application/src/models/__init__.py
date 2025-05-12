@@ -1,6 +1,7 @@
 from collections import deque
 from enum import Enum
 import random
+import json
 
 class EmotionalState(Enum):
     MIEDO = -2
@@ -167,7 +168,7 @@ class SemanticSyntaxModel:
         """
         # Intentar adaptar la respuesta basada en el historial
         adapted_response = self.adapt_response(input_text)
-        if adapted_response:
+        if (adapted_response):
             return adapted_response, self.emotional_state, list(self.emotional_memory)
 
         # Interpretar el significado
@@ -208,11 +209,19 @@ if __name__ == "__main__":
         print(f"Estado emocional de la IA: {emotional_state.name}")
         print(f"Memoria emocional: {[state.name for state in memory]}")
         print("-" * 50)
-{
-  "cSpell.language": "en,es",
-  "cSpell.words": ["sitebuiltins", "pylance", "maketrans"]
-}{
-  "cSpell.ignorePaths": ["**/node_modules/**", "**/dist/**"]
-{
-  "cSpell.enabledLanguageIds": ["python", "plaintext"]
-}}
+
+# Cargar el JSON desde un archivo con manejo de excepciones
+try:
+    with open("thunder_client_config.json", "r") as file:
+        data = json.load(file)
+
+    # Acceder a los datos de forma segura
+    message = data.get("message", "Mensaje no disponible")
+    git_feature = data.get("features", {}).get("git", "Función no disponible")
+
+    print(message)  # Output: Welcome to Thunder Client (si existe)
+    print(git_feature)  # Output: Save data to Git Workspace (si existe)
+except FileNotFoundError:
+    print("El archivo 'thunder_client_config.json' no fue encontrado.")
+except json.JSONDecodeError:
+    print("Error al decodificar el archivo JSON.")

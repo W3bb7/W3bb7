@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
+        "alegria",
         "ALEGRIA",
+        "emocion",
         "envolvente",
         "Hormigueo",
         "MIEDO",
@@ -8,5 +10,6 @@
         "TRISTEZA"
     ],
     "nxConsole.nxWorkspacePath": ".idea/ai-application/ai-application/src/models",
-    "wolf.disableHotModeWarning": true
+    "wolf.disableHotModeWarning": true,
+    "cSpell.language": "en,es"
 }
