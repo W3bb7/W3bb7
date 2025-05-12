@@ -6,5 +6,6 @@
         "MIEDO",
         "Opresión",
         "TRISTEZA"
-    ]
+    ],
+    "nxConsole.nxWorkspacePath": ".idea/ai-application/ai-application/src/models"
 }

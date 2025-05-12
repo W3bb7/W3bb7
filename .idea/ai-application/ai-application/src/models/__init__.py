@@ -1,4 +1,6 @@
+from collections import deque
 from enum import Enum
+import random
 
 class EmotionalState(Enum):
     MIEDO = -2
@@ -71,6 +73,8 @@ class SemanticSyntaxModel:
             "adiós": "despedida",
             "gracias": "agradecimiento",
             "ayuda": "solicitud",
+            "triste": "emocion_tristeza",
+            "feliz": "emocion_alegria",
         }
 
         # Reglas sintácticas: cómo estructurar respuestas
@@ -79,7 +83,18 @@ class SemanticSyntaxModel:
             "despedida": "¡Adiós! Que tengas un buen día.",
             "agradecimiento": "De nada, estoy aquí para ayudarte.",
             "solicitud": "Claro, dime qué necesitas.",
+            "emocion_tristeza": "Lamento que te sientas así. Estoy aquí para escucharte.",
+            "emocion_alegria": "¡Me alegra saber que estás feliz! ¿Cómo puedo ayudarte hoy?",
         }
+
+        # Estado emocional inicial de la IA
+        self.emotional_state = EmotionalState.ALEGRIA
+
+        # Memoria emocional (cola con tamaño fijo)
+        self.emotional_memory = deque(maxlen=5)
+
+        # Historial de interacciones
+        self.interaction_history = []
 
     def interpret(self, input_text):
         """
@@ -96,21 +111,100 @@ class SemanticSyntaxModel:
         """
         return self.syntax_rules.get(meaning, "Lo siento, no entiendo tu solicitud.")
 
+    def adjust_emotional_state(self, meaning):
+        """
+        Ajusta el estado emocional de la IA basado en el significado detectado.
+        """
+        if meaning == "emocion_tristeza":
+            self.emotional_state = EmotionalState.TRISTEZA
+        elif meaning == "emocion_alegria":
+            self.emotional_state = EmotionalState.ALEGRIA
+
+        # Registrar el estado emocional en la memoria
+        self.emotional_memory.append(self.emotional_state)
+
+    def analyze_emotional_memory(self):
+        """
+        Analiza la memoria emocional para influir en las respuestas.
+        """
+        if len(self.emotional_memory) == 0:
+            return "neutral"
+
+        # Contar la frecuencia de cada estado emocional
+        emotional_counts = {state: self.emotional_memory.count(state) for state in EmotionalState}
+        dominant_emotion = max(emotional_counts, key=emotional_counts.get)
+
+        return dominant_emotion
+
+    def learn_from_interaction(self, user_input, response, emotional_state):
+        """
+        Registra la interacción en el historial para aprendizaje futuro.
+        """
+        self.interaction_history.append({
+            "input": user_input,
+            "response": response,
+            "emotional_state": emotional_state.name,
+        })
+
+    def adapt_response(self, input_text):
+        """
+        Ajusta la respuesta basándose en el historial de interacciones.
+        """
+        # Buscar patrones similares en el historial
+        similar_interactions = [
+            interaction for interaction in self.interaction_history
+            if input_text in interaction["input"]
+        ]
+
+        if similar_interactions:
+            # Elegir una respuesta basada en interacciones previas
+            return random.choice(similar_interactions)["response"]
+        return None
+
     def process_input(self, input_text):
         """
-        Procesa la entrada del usuario y genera una respuesta.
+        Procesa la entrada del usuario, ajusta el estado emocional y genera una respuesta.
         """
+        # Intentar adaptar la respuesta basada en el historial
+        adapted_response = self.adapt_response(input_text)
+        if adapted_response:
+            return adapted_response, self.emotional_state, list(self.emotional_memory)
+
+        # Interpretar el significado
         meaning = self.interpret(input_text)
+        self.adjust_emotional_state(meaning)
+        dominant_emotion = self.analyze_emotional_memory()
         response = self.generate_response(meaning)
-        return response
+
+        # Ajustar la respuesta según la emoción dominante
+        if dominant_emotion == EmotionalState.TRISTEZA:
+            response += " Recuerda que siempre puedes contar conmigo."
+        elif dominant_emotion == EmotionalState.ALEGRIA:
+            response += " ¡Es genial mantener esta energía positiva!"
+
+        # Aprender de la interacción
+        self.learn_from_interaction(input_text, response, self.emotional_state)
+
+        return response, self.emotional_state, list(self.emotional_memory)
 
 
 # Procesa la entrada del usuario y genera una respuesta.
 if __name__ == "__main__":
     model = SemanticSyntaxModel()
 
-    # Entrada del usuario
-    user_input = "Hola, necesito ayuda"
-    response = model.process_input(user_input)
-    print(f"Usuario: {user_input}")
-    print(f"IA: {response}")
+    # Simulación de interacciones
+    user_inputs = [
+        "Estoy muy triste hoy",
+        "Gracias por tu ayuda",
+        "Me siento feliz ahora",
+        "Estoy un poco triste otra vez",
+        "Hola, necesito ayuda",
+    ]
+
+    for user_input in user_inputs:
+        response, emotional_state, memory = model.process_input(user_input)
+        print(f"Usuario: {user_input}")
+        print(f"IA: {response}")
+        print(f"Estado emocional de la IA: {emotional_state.name}")
+        print(f"Memoria emocional: {[state.name for state in memory]}")
+        print("-" * 50)
