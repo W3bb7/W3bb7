@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+crme_gitlab_entry_resuelto.py
+Generador de la entrada Markdown para CRME (Kabb3) y (opcional) push a GitLab.
+Versión corregida y robusta.
+
+Funciones:
+ - Genera CRME_KABB3_ENTRY.md localmente (por defecto).
+ - Opcionalmente sube el archivo al repo de GitLab (create o update).
+ - Opcionalmente crea un issue en GitLab con el contenido del markdown.
+
+Variables de entorno (opcional):
+ - GITLAB_TOKEN: token personal (PRIVATE-TOKEN).
+ - GITLAB_PROJECT_ID: id numérico del proyecto.
+ - GITLAB_API_BASE: base API, por defecto https://gitlab.com/api/v4
+
+Uso:
+  - Solo generar archivo:
+      python3 crme_gitlab_entry_resuelto.py
+  - Generar y subir archivo al repo:
+      python3 crme_gitlab_entry_resuelto.py --push
+  - Generar y crear issue:
+      python3 crme_gitlab_entry_resuelto.py --issue
+  - Las opciones --push y --issue pueden combinarse.
+
+Nota:
+ - El script usa la ruta local del PDF subido: /mnt/data/TEMPLARIO KHABA.pdf
+ - Requiere la librería requests (pip install requests).
+"""
+
+from __future__ import annotations
+import os
+import sys
+import argparse
+from urllib.parse import quote_plus
+import json
+
+# Intentar importar requests y avisar si falta
+try:
+    import requests
+except Exception as e:
+    print("ERROR: Falta la librería 'requests'. Instálala con: pip install requests")
+    sys.exit(1)
+
+
+# ----------------------------
+# Configurables / Defaults
+# ----------------------------
+PDF_LOCAL_PATH = "/mnt/data/TEMPLARIO KHABA.pdf"
+DEFAULT_OUTPUT_FILENAME = "CRME_KABB3_ENTRY.md"
+GITLAB_API_BASE = os.getenv("GITLAB_API_BASE", "https://gitlab.com/api/v4")
+
+# Permitir configuración desde entorno (práctico para CI)
+ENV_GITLAB_TOKEN = os.getenv("GITLAB_TOKEN", "").strip()
+ENV_GITLAB_PROJECT_ID = os.getenv("GITLAB_PROJECT_ID", "").strip()
+
+
+# ----------------------------
+# Contenido Markdown (plantilla)
+# ----------------------------
+MARKDOWN_TITLE = "CRME — KABB3: El Grimorio de los Estados"
+
+MARKDOWN_BODY = f"""\
+# {MARKDOWN_TITLE}
+
+**Propósito**  
+Presentar el flujo emocional del usuario como un rito de cuidado: onboarding ritualizado, micro-sesiones diarias, detección proactiva y puente clínico. Lenguaje evocador pero claro para usuarios y profesionales.
+
+**Referencia de origen (documento subido):**  
+`{PDF_LOCAL_PATH}`
+
+---
+
+## Formatos
+- Vídeo demo (1:30)
+- Guion VO + microcopy in-app
+- Especificación de eventos para devs (al final)
+
+## Voz y tono
+Voz en off: cálida, firme, ligeramente ceremonial. Microcopy: conciso, metafórico — usa símbolos (sello, varita, mapa) para representar estados y acciones.
+
+## Guion (vídeo 1:30)
+**[0:00 — 0:06]**  
+Imagen: cuaderno abierto con símbolo (Ahavah).  
+VO: “Bienvenido al CRME. Aquí tus emociones registran su propio mapa.”
+
+**[0:06 — 0:18] — Onboarding / Primer ritual**  
+- Usuario completa 4 preguntas (íconos: latido, nube, llama, ancla).  
+- VO: “Contesta cuatro latidos: hoy, energía, miedo, y confianza. En cada latido, eliges cómo sonarás.”  
+- Microcopy:  
+  - Pregunta 1: “¿Cómo late hoy tu corazón?” (escala 1–5)  
+  - Pregunta 2: “¿Qué te pesa?” (palabras clave)  
+  - Botón final: “Sellar”
+
+**[0:18 — 0:35] — Sesión diaria: 60 segundos**  
+- Interacción con agente CRME (avatar: “Guardián”).  
+- Diálogo ejemplo:  
+  - Agente: “Respira 3 veces. ¿Una palabra para hoy?”  
+  - Usuario: “Cansancio.”  
+- Respuesta: “Recibido. Trazando ruta: +pausa, -exposición.”
+
+**[0:35 — 0:50] — Detección y escalado**  
+- Gráfico que muestra aumento de alerta.  
+- VO: “Si el mapa muestra tormenta, se enciende la lámpara: tu profesional recibe un resumen y una recomendación concreta.”  
+- Microcopy notificación profesional: “Alerta: pulso emocional alto — 3 últimas entradas con auto-descripción ‘angustia’ — sugerencia: check-in 10 min.”
+
+**[0:50 — 1:05] — Puente paciente — profesional**  
+- Chat seguro, resumen automático y calendario para sesión.  
+- VO: “El puente se abre: información útil, no juicios. Propuesta: sesión, intervención breve, o plan de autogestión.”  
+- Microcopy botones: “Agendar”, “Enviar resumen”, “Activar plan nocturno”
+
+**[1:05 — 1:20] — Ritual de cierre**  
+- Usuario cierra la app; pantalla muestra un símbolo sellado.  
+- VO: “Cada cierre es un sello. Aprendemos, afinamos, acompañamos.”  
+- Microcopy final: “Sello aplicado — Tu mapa se actualizó.”
+
+**[1:20 — 1:30] — Call to action**  
+VO: “CRME — Kabb3. Donde tu emoción tiene su grimorio y su guardián.”
+
+---
+
+## Microcopy & mensajes clave
+- Onboarding: “Sellar mi latido”  
+- Sesión corta: “Sesión: 60s” / “Respira 3 veces”  
+- Alerta: “Lámpara encendida: revisar”  
+- Privacidad: “Tus sellos son privados — compartes solo lo necesario”  
+- Recomendación: “Plan nocturno sugerido” / “Ejercicio respiratorio — 2 min”
+
+---
+
+## Flujos UX (resumen técnico)
+1. Onboarding ritualizado  
+   - Inputs: mood_score (1–5), energy, single-word tag, free-text note.  
+   - Resultado: user_profile emotional baseline.
+
+2. Check-in diario (micro-sesión)  
+   - Duración: ≤ 60 s  
+   - Steps: breathe prompt → mood quick-scale → intent selection (rest, talk, urgent) → micro-action suggested.  
+   - Output events: `checkin.completed`, `intent.selected`, `microaction.started`
+
+3. Detección de riesgo / alerta  
+   - Regla ejemplo: si mood_score ≤ 2 y 2 de 3 entradas contienen tag “angustia” → crear `alert.proactive`  
+   - Notifica: clinician (si consentido) + ofrecer recurso inmediato al usuario (línea de ayuda, plan respiratorio).
+
+4. Puente (clinician dashboard)  
+   - Vista: timeline compacta, tags, short summary (3 bullet points), suggested interventions (pre-filled).  
+   - Actions: “Solicitar check-in”, “Agendar”, “Enviar plan”.
+
+5. Cierre / sello de sesión  
+   - Evento: `session.sealed` (hash metadata, no PII raw export)  
+   - UI: animación simbólica (sello Ahavah).
+
+---
+
+## Especificación mínima de eventos (telemetría)
+- `onboarding.started`  
+- `onboarding.completed`  
+- `checkin.started`  
+- `checkin.completed`  
+- `intent.selected`  
+- `microaction.suggested`  
+- `microaction.completed`  
+- `alert.proactive`  
+- `session.sealed`  
+- `summary.sent_to_professional`
+
+---
+
+## Privacidad y consentimiento
+- “Decides tú qué compartir. El CRME cifra tus sellos; solo tú y las personas que autorices pueden leer tus resúmenes.”  
+- Consentimiento granular: “Compartir alertas automáticas: Sí / No” (default: No)
+
+---
+
+## Notas visuales (Kabb3)
+- Paleta: negro carbón, ocre antiguo, acentos magenta (sello).  
+- Tipografía: clara, con kerning abierto.  
+- Iconografía: símbolos únicos (sello, latido, lámpara).  
+- Animaciones: sellos que laten; transiciones suaves tipo “papiro que se cierra”.
+
+---
+"""
+
+# ----------------------------
+# Funciones auxiliares
+# ----------------------------
+
+def write_markdown_file(filename: str = DEFAULT_OUTPUT_FILENAME) -> str:
+    """
+    Escribe el archivo markdown y devuelve la ruta absoluta.
+    """
+    content = f"# {MARKDOWN_TITLE}\n\n" + MARKDOWN_BODY
+    with open(filename, "w", encoding="utf-8") as fh:
+        fh.write(content)
+    abs_path = os.path.abspath(filename)
+    print(f"[OK] Archivo generado: {abs_path}")
+    return abs_path
+
+
+def _gitlab_headers(token: str | None) -> dict:
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["PRIVATE-TOKEN"] = token
+    return headers
+
+
+def gitlab_file_create_or_update(project_id: str, file_path: str, branch: str, content: str,
+                                 commit_message: str = "Añadir/Actualizar CRME — Kabb3",
+                                 token: str | None = None, api_base: str = GITLAB_API_BASE) -> tuple[bool, dict | str]:
+    """
+    Crea o actualiza un archivo en el repo de GitLab.
+    Retorna (success, response_json_or_text)
+    """
+    if not token:
+        return False, "Falta GITLAB token."
+
+    project_enc = quote_plus(str(project_id))
+    file_enc = quote_plus(file_path)
+    url = f"{api_base}/projects/{project_enc}/repository/files/{file_enc}"
+
+    headers = _gitlab_headers(token)
+    params = {"ref": branch}
+
+    # Comprobar existencia del archivo (GET)
+    try:
+        r_get = requests.get(url, headers=headers, params=params, timeout=15)
+    except Exception as e:
+        return False, f"Error realizando GET a GitLab: {e}"
+
+    payload = {
+        "branch": branch,
+        "content": content,
+        "commit_message": commit_message,
+    }
+
+    # Si existe -> actualizar con PUT; si no -> crear con POST
+    if r_get.status_code == 200:
+        try:
+            r_put = requests.put(url, headers=headers, json=payload, timeout=15)
+            if r_put.status_code in (200, 201):
+                return True, r_put.json()
+            else:
+                return False, f"PUT falló ({r_put.status_code}): {r_put.text}"
+        except Exception as e:
+            return False, f"Error en PUT a GitLab: {e}"
+    elif r_get.status_code == 404:
+        # Crear
+        try:
+            r_post = requests.post(url, headers=headers, json=payload, timeout=15)
+            if r_post.status_code in (200, 201):
+                return True, r_post.json()
+            else:
+                return False, f"POST falló ({r_post.status_code}): {r_post.text}"
+        except Exception as e:
+            return False, f"Error en POST a GitLab: {e}"
+    else:
+        # Otro código inesperado (401, 403, 400, etc.)
+        return False, f"GET respondió con {r_get.status_code}: {r_get.text}"
+
+
+def gitlab_create_issue(project_id: str, title: str, description: str, token: str | None,
+                        api_base: str = GITLAB_API_BASE) -> tuple[bool, dict | str]:
+    """
+    Crea un issue en GitLab. Retorna (success, response_json_or_text)
+    """
+    if not token:
+        return False, "Falta GITLAB token."
+
+    project_enc = quote_plus(str(project_id))
+    url = f"{api_base}/projects/{project_enc}/issues"
+    headers = _gitlab_headers(token)
+    payload = {
+        "title": title,
+        "description": description
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=15)
+    except Exception as e:
+        return False, f"Error en POST issue: {e}"
+
+    if r.status_code in (200, 201):
+        return True, r.json()
+    else:
+        return False, f"GitLab issue API respondió {r.status_code}: {r.text}"
+
+
+# ----------------------------
+# CLI / Main
+# ----------------------------
+def main():
+    parser = argparse.ArgumentParser(description="Generador y (opcional) push a GitLab — CRME Kabb3 (resuelto)")
+    parser.add_argument("--output", "-o", default=DEFAULT_OUTPUT_FILENAME, help="Nombre del archivo Markdown de salida")
+    parser.add_argument("--push", action="store_true", help="Subir el archivo a GitLab (create o update). Requiere token y project id.")
+    parser.add_argument("--issue", action="store_true", help="Crear un issue en GitLab con el contenido (requiere token y project id).")
+    parser.add_argument("--branch", default="main", help="Rama destino para el archivo (por defecto: main)")
+    parser.add_argument("--target-path", default="docs/CRME_KABB3_ENTRY.md", help="Path destino en repo (si --push)")
+    parser.add_argument("--token", default=ENV_GITLAB_TOKEN, help="GitLab token (opcional, se puede usar variable de entorno)")
+    parser.add_argument("--project-id", default=ENV_GITLAB_PROJECT_ID, help="GitLab project ID (opcional, se puede usar variable de entorno)")
+    args = parser.parse_args()
+
+    # 1) Generar el markdown local
+    local_path = write_markdown_file(args.output)
+
+    # Leer contenido para uso en push/issue
+    with open(local_path, "r", encoding="utf-8") as fh:
+        content = fh.read()
+
+    # 2) Opcional: push a GitLab
+    if args.push:
+        token = args.token or input("Introduce tu GITLAB_TOKEN: ").strip()
+        project_id = args.project_id or input("Introduce tu GITLAB_PROJECT_ID: ").strip()
+        if not token or not project_id:
+            print("[ERROR] Para --push necesitas GITLAB_TOKEN y GITLAB_PROJECT_ID (o config en entorno). Abortando push.")
+        else:
+            success, resp = gitlab_file_create_or_update(
+                project_id=project_id,
+                file_path=args.target_path,
+                branch=args.branch,
+                content=content,
+                commit_message="Añadir/Actualizar CRME — Kabb3 (auto)",
+                token=token,
+                api_base=GITLAB_API_BASE
+            )
+            if success:
+                print("[OK] Archivo subido a GitLab correctamente.")
+                # Mostrar info útil de la respuesta si es JSON
+                if isinstance(resp, dict):
+                    print("Respuesta GitLab:", json.dumps(resp, indent=2, ensure_ascii=False))
+            else:
+                print("[ERROR] Upload fallido:", resp)
+
+    # 3) Opcional: crear issue
+    if args.issue:
+        token = args.token or input("Introduce tu GITLAB_TOKEN (para crear issue): ").strip()
+        project_id = args.project_id or input("Introduce tu GITLAB_PROJECT_ID (para crear issue): ").strip()
+        if not token or not project_id:
+            print("[ERROR] Para --issue necesitas GITLAB_TOKEN y GITLAB_PROJECT_ID. Abortando creación de issue.")
+        else:
+            title = MARKDOWN_TITLE
+            # Para issues, limitar la descripción a un tamaño razonable (GitLab admite bastante, pero mejor resumir)
+            description = content
+            success, resp = gitlab_create_issue(project_id=project_id, title=title, description=description, token=token, api_base=GITLAB_API_BASE)
+            if success:
+                print("[OK] Issue creado en GitLab correctamente.")
+                if isinstance(resp, dict):
+                    print("Issue creado:", json.dumps(resp, indent=2, ensure_ascii=False))
+            else:
+                print("[ERROR] Crear issue falló:", resp)
+
+    print("\nProceso finalizado. Archivo local disponible en:", os.path.abspath(local_path))
+    if not args.push and not args.issue:
+        print("Si quieres subirlo a GitLab ejecuta con --push o crear un issue con --issue.")
+
+
+if __name__ == "__main__":
+    main()
